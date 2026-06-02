@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# Trained router artifacts
+*.routermodel
+model.pkl
+
+# Local data / HF cache (RouterBench is downloaded on demand)
+data/
+.cache/

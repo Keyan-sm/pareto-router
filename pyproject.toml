@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pareto-router"
+version = "0.1.0"
+description = "Cost-aware LLM router: predict each model's quality on a query, then route on the cost-quality frontier. Trained and benchmarked on RouterBench."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Keyan Mikaili" }]
+keywords = ["llm", "llm-routing", "routerbench", "model-selection", "cost-optimization", "routellm", "llmops"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = ["numpy>=1.23", "scikit-learn>=1.1"]
+
+[project.optional-dependencies]
+bench = ["pandas>=1.5", "huggingface_hub>=0.20"]
+providers = ["openai>=1.0", "anthropic>=0.30"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+pareto-router = "pareto_router.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Keyan-sm/pareto-router"
+
+[tool.setuptools.packages.find]
+include = ["pareto_router*"]
