@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import numpy as np
 
-# numpy>=2 renames trapz -> trapezoid; support both.
-_trapz = getattr(np, "trapezoid", getattr(np, "trapz"))
+# numpy>=2 renames trapz -> trapezoid (and removes trapz in 2.x); support both.
+_trapz = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
 
 
 def pareto_frontier(costs, qualities) -> np.ndarray:
