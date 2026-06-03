@@ -17,7 +17,7 @@ TF-IDF and ridge regression:
 The blue line traces the router as you turn the cost/quality knob (`λ`). Each grey dot is
 one model; the router runs above and to the left of all of them. The green star marks the
 per-query oracle, the headroom a stronger featurizer can still reach (see
-[Scope](#scope-and-honest-limitations)).
+[Scope](#scope)).
 
 ## Why this exists
 
@@ -79,7 +79,7 @@ pareto-router route  "..." --model r.pkl --lam 0.3
 stratified by eval set, trains the predictor on the train half, and sweeps `λ` over the
 held-out half against fixed reference points. The router decides from predicted quality on
 queries it never saw; per-query cost is taken as known, which follows the standard
-RouterBench scoring protocol (see [Scope](#scope-and-honest-limitations)).
+RouterBench scoring protocol (see [Scope](#scope)).
 
 ```
 RouterBench reproduction  |  train=25547  test=10950  models=11
@@ -102,7 +102,7 @@ router vs best affordable single model, by budget:
 Every number above comes from this library on the RouterBench 0-shot split, not from a
 paper. Reproduce them with `pareto-router benchmark` (about 10 s on a laptop).
 
-## What's faithful to the papers, and what's mine
+## Precedent and iteration
 
 | Component | Source | Fidelity |
 | --- | --- | --- |
@@ -113,19 +113,16 @@ paper. Reproduce them with `pareto-router benchmark` (about 10 s on a laptop).
 | Multi-model frontier + λ knob + budget mode | mine | RouteLLM routes binary strong/weak; this routes over the full pool |
 | Length-budget-aware routing | R2-Router | Not implemented, see Scope |
 
-## Scope and honest limitations
+## Scope
 
-- **No length-budget routing yet.** R2-Router's headline idea also chooses an output-length
-  budget per query. That needs per-length quality data (their R2-Bench, built on SPROUT with
-  learned embeddings). RouterBench carries one quality and cost per query-model, so this
-  library cannot evaluate length budgets honestly. It sits on the roadmap, out of the numbers
-  above.
+- **No length-budget routing yet.** R2-Router also picks an output-length budget per query,
+  which needs per-length data (their R2-Bench) that RouterBench lacks. On the roadmap, out of
+  the numbers above.
 - **The predictor is a baseline.** TF-IDF and ridge stay light on purpose. The oracle reaches
-  0.910 against the router's top of about 0.785; that gap is the headroom a stronger featurizer
-  (a sentence-transformer, dropped in through the `Featurizer` protocol) would capture. One swap
-  closes most of it.
-- **Cost at decision time.** The benchmark uses RouterBench's recorded per-query cost. For live
-  routing, `RouterModel.route` falls back to per-model mean cost unless you pass a real estimate.
+  0.910 against the router's top of 0.785; swap in a stronger featurizer (a sentence-transformer
+  through the `Featurizer` protocol) and you close most of that gap.
+- **Cost at decision time.** The benchmark uses RouterBench's recorded per-query cost; live
+  routing falls back to per-model mean cost unless you pass an estimate.
 
 ## Module map
 
