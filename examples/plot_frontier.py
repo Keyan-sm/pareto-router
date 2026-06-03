@@ -11,11 +11,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from pareto_router import load_sprout, run_benchmark  # noqa: E402
+from pareto_router import load_llmrouterbench, run_benchmark  # noqa: E402
 
 
 def main() -> None:
-    data = load_sprout("o3mini")
+    data = load_llmrouterbench()
     report = run_benchmark(data)
 
     rc = [p.avg_cost for p in report.router_curve]
@@ -28,7 +28,7 @@ def main() -> None:
     for name, info in report.baselines.items():
         if info["kind"] == "single_model":
             ax.scatter(info["cost"], info["quality"], color="#9ca3af", s=18, zorder=2)
-            ax.annotate(name.split("-", 1)[-1], (info["cost"], info["quality"]),
+            ax.annotate(name, (info["cost"], info["quality"]),
                         fontsize=6, color="#6b7280", xytext=(3, 2), textcoords="offset points")
 
     strongest = report.summary["strongest_model"]
@@ -42,7 +42,7 @@ def main() -> None:
     ax.set_xscale("log")
     ax.set_xlabel("cost  ($ / query, log scale)")
     ax.set_ylabel("quality (accuracy)")
-    ax.set_title(f"pareto-router on SPROUT (current models): {report.n_test:,} held-out queries, {len(report.models)} models")
+    ax.set_title(f"pareto-router on LLMRouterBench (current models): {report.n_test:,} held-out queries, {len(report.models)} models")
     ax.legend(fontsize=8, loc="lower right")
     ax.grid(True, alpha=0.3)
 

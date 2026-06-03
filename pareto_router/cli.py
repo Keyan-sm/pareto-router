@@ -6,8 +6,9 @@ import json
 
 
 def _add_dataset_args(parser) -> None:
-    parser.add_argument("--benchmark", default="sprout", choices=["sprout", "routerbench"],
-                        help="routing dataset (default: sprout, current models)")
+    parser.add_argument("--benchmark", default="llmrouterbench",
+                        choices=["llmrouterbench", "sprout", "routerbench"],
+                        help="routing dataset (default: llmrouterbench, current frontier models)")
     parser.add_argument("--variant", default="o3mini", help="SPROUT variant: o3mini | base")
     parser.add_argument("--split", default="0shot", help="RouterBench split: 0shot | 5shot")
 
@@ -17,7 +18,9 @@ def _load(args):
 
     if args.benchmark == "routerbench":
         return datasets.load_routerbench(split=args.split)
-    return datasets.load_sprout(variant=args.variant)
+    if args.benchmark == "sprout":
+        return datasets.load_sprout(variant=args.variant)
+    return datasets.load_llmrouterbench()
 
 
 def _cmd_benchmark(args) -> None:

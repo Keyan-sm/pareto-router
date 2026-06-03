@@ -149,6 +149,88 @@ def load_sprout(variant: str = "o3mini", split: str = "test",
 
 
 # =============================================================================
+# LLMRouterBench - current flagship pool (GPT-5, Claude-4, Gemini-2.5-Pro, ...)
+# =============================================================================
+
+LLMROUTERBENCH_REPO = "NPULH/LLMRouterBench"
+# The current frontier + strong open-weight subset of the 33-model release. Each record
+# already carries a real per-call cost (dollars), so no price table is needed.
+LLMROUTERBENCH_FLAGSHIP = [
+    "gpt-5", "gpt-5-chat", "claude-sonnet-4", "gemini-2.5-pro", "gemini-2.5-flash",
+    "qwen3-235b-a22b-2507", "qwen3-235b-a22b-thinking-2507", "deepseek-v3.1-terminus",
+    "deepseek-r1-0528", "deepseek-v3-0324", "kimi-k2-0905", "glm-4.6",
+]
+
+
+def load_llmrouterbench(models: Optional[List[str]] = None,
+                        cache_dir: Optional[str] = None) -> RoutingDataset:
+    """Load LLMRouterBench (Jan 2026) into a :class:`RoutingDataset`.
+
+    The release is a 1.28 GB archive of ``bench-release/<task>/<model>/*.json`` files;
+    each record has a per-query ``score`` and real ``cost``. Queries are aligned across
+    models by (task, index). Parsing is cached next to the download, so only the first
+    call is slow. ``models`` defaults to the current flagship subset.
+    """
+    import json
+    import os
+    import pickle
+    import tarfile
+
+    _pd, hf_hub_download = _bench_imports()
+    models = list(models or LLMROUTERBENCH_FLAGSHIP)
+    path = hf_hub_download(LLMROUTERBENCH_REPO, "bench-release.tar.gz",
+                           repo_type="dataset", cache_dir=cache_dir)
+    cache = f"{path}.routing-{len(models)}.pkl"
+    if os.path.exists(cache):
+        with open(cache, "rb") as fh:
+            return pickle.load(fh)
+
+    pool = set(models)
+    cells: Dict[tuple, Dict[str, tuple]] = {}
+    prompts: Dict[tuple, str] = {}
+    with tarfile.open(path, "r:gz") as tf:
+        for member in tf:
+            if not member.name.endswith(".json"):
+                continue
+            parts = member.name.split("/")  # bench-release/<task>/<model>/<file>.json
+            if len(parts) < 4 or parts[2] not in pool:
+                continue
+            task, model = parts[1], parts[2]
+            try:
+                payload = json.load(tf.extractfile(member))
+            except Exception:  # pragma: no cover - skip a corrupt shard
+                continue
+            for rec in payload.get("records", []):
+                score, cost = rec.get("score"), rec.get("cost")
+                if score is None or cost is None:
+                    continue
+                key = (task, rec.get("index"))
+                cells.setdefault(key, {})[model] = (float(score), float(cost))
+                prompts.setdefault(key, rec.get("origin_query") or rec.get("prompt") or "")
+
+    keys = sorted(k for k, v in cells.items() if len(v) == len(models))
+    n, m = len(keys), len(models)
+    quality = np.zeros((n, m))
+    cost = np.zeros((n, m))
+    for i, key in enumerate(keys):
+        for j, model in enumerate(models):
+            score, c = cells[key][model]
+            quality[i, j] = score
+            cost[i, j] = c
+    quality = np.clip(quality, 0.0, 1.0)
+    dataset = RoutingDataset(
+        prompts=[prompts[k] for k in keys],
+        models=models,
+        quality=quality,
+        cost=cost,
+        eval_name=np.array([k[0] for k in keys]),
+    )
+    with open(cache, "wb") as fh:
+        pickle.dump(dataset, fh)
+    return dataset
+
+
+# =============================================================================
 # RouterBench - older pool, kept to show the library is model-agnostic
 # =============================================================================
 
