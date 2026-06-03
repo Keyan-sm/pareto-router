@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from . import metrics
-from .data import RouterBench
+from .data import RoutingDataset
 from .features import TfidfFeaturizer
 from .predictor import QualityPredictor
 from .router import Router
@@ -51,7 +51,7 @@ def _stratified_split(eval_name, test_size, seed):
 
 
 def run_benchmark(
-    data: RouterBench,
+    data: RoutingDataset,
     lambdas: Optional[List[float]] = None,
     test_size: float = 0.3,
     seed: int = 0,

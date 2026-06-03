@@ -1,27 +1,40 @@
-"""Command line: ``pareto-router train | route | benchmark``."""
+"""Command line: ``pareto-router benchmark | train | route``."""
 from __future__ import annotations
 
 import argparse
 import json
 
 
+def _add_dataset_args(parser) -> None:
+    parser.add_argument("--benchmark", default="sprout", choices=["sprout", "routerbench"],
+                        help="routing dataset (default: sprout, current models)")
+    parser.add_argument("--variant", default="o3mini", help="SPROUT variant: o3mini | base")
+    parser.add_argument("--split", default="0shot", help="RouterBench split: 0shot | 5shot")
+
+
+def _load(args):
+    from . import data as datasets
+
+    if args.benchmark == "routerbench":
+        return datasets.load_routerbench(split=args.split)
+    return datasets.load_sprout(variant=args.variant)
+
+
 def _cmd_benchmark(args) -> None:
     from .benchmark import run_benchmark
-    from .data import load_routerbench
 
-    data = load_routerbench(split=args.split)
-    report = run_benchmark(data, test_size=args.test_size, seed=args.seed)
-    _print_report(report, verbose=args.verbose)
+    dataset = _load(args)
+    report = run_benchmark(dataset, test_size=args.test_size, seed=args.seed)
+    _print_report(report, args.benchmark, verbose=args.verbose)
 
 
 def _cmd_train(args) -> None:
-    from .data import load_routerbench
     from .model import RouterModel
 
-    data = load_routerbench(split=args.split)
-    model = RouterModel.fit(data, alpha=args.alpha)
+    dataset = _load(args)
+    model = RouterModel.fit(dataset, alpha=args.alpha)
     model.save(args.out)
-    print(f"trained on {len(data)} queries x {data.n_models} models -> saved {args.out}")
+    print(f"trained on {len(dataset)} queries x {dataset.n_models} models -> saved {args.out}")
 
 
 def _cmd_route(args) -> None:
@@ -44,9 +57,9 @@ def _cmd_route(args) -> None:
     ))
 
 
-def _print_report(report, verbose: bool = False) -> None:
+def _print_report(report, name: str, verbose: bool = False) -> None:
     s = report.summary
-    print(f"RouterBench reproduction  |  train={report.n_train}  test={report.n_test}  models={len(report.models)}")
+    print(f"{name} evaluation  |  train={report.n_train}  test={report.n_test}  models={len(report.models)}")
     print(f"strongest single model : {s['strongest_model']}  "
           f"quality={s['strongest_model_quality']:.3f}  cost=${s['strongest_model_cost']:.5f}")
     cm = s.get("router_cost_to_match_strongest_quality")
@@ -75,17 +88,17 @@ def _print_report(report, verbose: bool = False) -> None:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="pareto-router",
-                                     description="Cost-aware LLM router, trained and benchmarked on RouterBench.")
+                                     description="Cost-aware LLM router, benchmarked on real routing data.")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_bench = sub.add_parser("benchmark", help="Reproduce the RouterBench cost-quality evaluation.")
-    p_bench.add_argument("--split", default="0shot", choices=["0shot", "5shot"])
+    p_bench = sub.add_parser("benchmark", help="Reproduce the cost-quality evaluation.")
+    _add_dataset_args(p_bench)
     p_bench.add_argument("--test-size", type=float, default=0.3)
     p_bench.add_argument("--seed", type=int, default=0)
     p_bench.add_argument("-v", "--verbose", action="store_true")
 
     p_train = sub.add_parser("train", help="Train a router and save it.")
-    p_train.add_argument("--split", default="0shot", choices=["0shot", "5shot"])
+    _add_dataset_args(p_train)
     p_train.add_argument("--alpha", type=float, default=10.0)
     p_train.add_argument("--out", default="router.routermodel")
 
