@@ -187,6 +187,38 @@ def load_routerbench(split: str = "0shot", cache_dir: Optional[str] = None) -> R
     )
 
 
+def load_frontier(path: str) -> RoutingDataset:
+    """Load a dataset built by ``bench_gen/generate_routing_dataset.py`` (JSONL of
+    per-query, per-model score + cost). Reads a local file; no Hub download."""
+    import json
+
+    with open(path, encoding="utf-8") as fh:
+        rows = [json.loads(line) for line in fh if line.strip()]
+    if not rows:
+        raise ValueError(f"{path} has no rows")
+    models = list(rows[0]["models"].keys())
+    n, m = len(rows), len(models)
+    quality = np.full((n, m), np.nan)
+    cost = np.full((n, m), np.nan)
+    for i, row in enumerate(rows):
+        for j, model in enumerate(models):
+            cell = row["models"].get(model)
+            if not cell:
+                continue
+            quality[i, j] = float(cell["score"])
+            cost[i, j] = float(cell["cost"])
+    ok = ~(np.isnan(quality).any(axis=1) | np.isnan(cost).any(axis=1))
+    prompts = [r["prompt"] for r in rows]
+    eval_name = np.array([r.get("dataset", "na") for r in rows])
+    return RoutingDataset(
+        prompts=[p for p, keep in zip(prompts, ok) if keep],
+        models=models,
+        quality=quality[ok],
+        cost=cost[ok],
+        eval_name=eval_name[ok],
+    )
+
+
 def _join_prompt(prompt) -> str:
     """RouterBench prompts are stored as a list (possibly multi-turn); flatten to text."""
     if isinstance(prompt, (list, tuple)):

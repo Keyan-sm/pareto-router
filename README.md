@@ -105,6 +105,23 @@ Every number above comes from this library on SPROUT-o3mini, not from a paper. R
 with `pareto-router benchmark` (about 10 s on a laptop). Run `--benchmark routerbench` for the
 older 11-model pool; the router code does not change, which is the point of a model-agnostic design.
 
+### Benchmark your own (current) models
+
+Public routing datasets lag model releases: a new frontier (GPT-5.5, Opus/Sonnet 4.8, Gemini
+3.1 Pro, ...) ships before any public benchmark scores it. `bench_gen/generate_routing_dataset.py`
+builds a fresh `RoutingDataset` for any pool through OpenRouter (one key reaches every provider):
+it runs public exact-match tasks through each model, records OpenRouter's real per-call cost,
+grades deterministically (no LLM judge), and writes a file `load_frontier` reads.
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...
+python bench_gen/generate_routing_dataset.py --dry-run --n 60         # validate the pipeline, free
+python bench_gen/generate_routing_dataset.py --estimate --n 500       # project the spend first
+python bench_gen/generate_routing_dataset.py --n 500 --out frontier.jsonl
+```
+
+Then `load_frontier("frontier.jsonl")` feeds the same router, benchmark, and plot.
+
 ## Precedent and iteration
 
 | Component | Source | Fidelity |

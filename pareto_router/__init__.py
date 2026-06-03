@@ -27,7 +27,7 @@ __all__ = [
 def __getattr__(name):
     # Lazily expose the dataset loaders so importing the package doesn't pull in the
     # optional [bench] dependencies (pandas / huggingface_hub / pyarrow).
-    if name in ("load_sprout", "load_routerbench", "RoutingDataset", "RouterBench"):
+    if name in ("load_sprout", "load_routerbench", "load_frontier", "RoutingDataset", "RouterBench"):
         from . import data
 
         return getattr(data, name)
