@@ -1,7 +1,9 @@
 # pareto-router
 
 **An LLM router: predict how well each model handles a query, then pick on the
-cost-quality frontier.** Small, dependency-light, trained and benchmarked on real data.
+cost-quality frontier.** Small and dependency-light, it implements RouteLLM's predict-quality-then-route
+paradigm (Ong et al., 2024) and R2-Router's cost-quality selection objective
+(Xue et al., 2026), trained and benchmarked on RouterBench data (Hu et al., 2024).
 
 On 10,950 held-out RouterBench queries across 11 models, a `pareto-router` trained with
 TF-IDF and ridge regression:
